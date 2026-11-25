@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spatiotemporal Association Patterns in NYC Taxi Trips · Group 24</title>
+<meta name="description" content="Interactive companion to the AIAA 3111 Group 24 poster: one month of New York yellow-taxi trips, mined for association rules and checked count by count.">
+<meta name="theme-color" content="#1B1B1B">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">AIAA 3111 Course Project · Group 24</p>
+    <h1>Spatiotemporal Association Patterns in NYC&nbsp;Taxi&nbsp;Trips</h1>
+    <p class="deck">One month of New York yellow-taxi trips, mined for association rules and checked count by count. This page is the interactive companion to our poster.</p>
+    <p class="authors">Yixuan Liu · Zhike Tang · Zizhou Huang</p>
+  </div>
+</header>
+<div class="checker" aria-hidden="true"></div>
+
+<nav class="toc" aria-label="Sections">
+  <div class="wrap">
+    <a href="#where">Map</a><a href="#flows">Flows</a><a href="#time">Time</a><a href="#rules">Rules</a><a href="#forecast">Forecast</a><a href="#quality">Data quality</a><a href="#method">Method</a>
+  </div>
+</nav>
+
+<main id="main">
+  <section class="wrap funnel-section" aria-label="From raw records to rules">
+    <ol class="funnel" id="funnel"></ol>
+  </section>
+
+  <section class="wrap section" id="where">
+    <p class="kicker">Where the trips are</p>
+    <h2>Nearly nine in ten pickups happen in Manhattan (<span data-v="summary.manhattan_pickup_share|pct1"></span>)</h2>
+    <p class="lede">Each taxi zone is shaded by its share of all cleaned trips. Hover a zone for its numbers, or select one to see where its trips go and where they come from. Zone counts are descriptive; the association rules further down use boroughs.</p>
+    <div class="map-layout">
+      <figure class="map-figure">
+        <div class="controls" role="group" aria-label="Map options">
+          <div class="seg" role="radiogroup" aria-label="Shade by">
+            <button type="button" role="radio" aria-checked="true" data-metric="pickups">Pickups</button>
+            <button type="button" role="radio" aria-checked="false" data-metric="dropoffs">Drop-offs</button>
+          </div>
+          <label class="select">Zone
+            <select id="zone-select"></select>
+          </label>
+        </div>
+        <svg id="map" class="map" role="img" aria-label="Map of New York City taxi zones shaded by share of trips"></svg>
+        <figcaption>
+          <div class="legend" id="map-legend"></div>
+          <span class="note">Taxi zones: NYC TLC. Newark Airport (EWR) is in the zone list but not drawn.</span>
+        </figcaption>
+      </figure>
+      <aside class="zone-panel" id="zone-panel" aria-live="polite"></aside>
+    </div>
+    <div class="callouts">
+      <div class="callout">
+        <p class="big" data-v="summary.manhattan_internal_share|pct1"></p>
+        <p>of cleaned trips both start <b>and</b> end in Manhattan.</p>
+      </div>
+      <div class="callout">
+        <p class="big"><span data-v="summary.case.confidence|pct0"></span> vs <span data-v="summary.case.baseline|pct0"></span></p>
+        <p>of Brooklyn pickups end in Brooklyn, against Brooklyn's <span data-v="summary.case.baseline|pct1"></span> share of all drop-offs: lift <b data-v="summary.case.lift|f1"></b>, the strongest rule we found.</p>
+      </div>
+      <div class="callout">
+        <p class="big" data-v="summary.airport_pickup_share_total|pct1"></p>
+        <p>of pickups are at the two airports: JFK <span data-v="summary.airport_pickup_share.JFK|pct2"></span>, LaGuardia <span data-v="summary.airport_pickup_share.LaGuardia|pct2"></span>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="flows">
+    <p class="kicker">Borough flows</p>
+    <h2>Outer-borough pickups end in the same borough far more often than average</h2>
+    <p class="lede">Rows are pickup boroughs, columns are drop-off boroughs. Switch to <em>row %</em> to read each row as a conditional distribution. Those percentages are exactly the confidence of the rule “pickup borough → drop-off borough”.</p>
+    <div class="controls">
+      <div class="seg" role="radiogroup" aria-label="Matrix values">
+        <button type="button" role="radio" aria-checked="true" data-mode="all">% of all trips</button>
+        <button type="button" role="radio" aria-checked="false" data-mode="row">Row % (where pickups end)</button>
+        <button type="button" role="radio" aria-checked="false" data-mode="col">Column % (where drop-offs began)</button>
+      </div>
+    </div>
+    <div class="matrix-wrap"><svg id="matrix" class="matrix" role="img" aria-label="Borough origin-destination matrix"></svg></div>
+    <p class="note">Denominator for “% of all trips”: <span data-v="summary.clean_records|int"></span> cleaned trips. Boroughs are coarser than taxi zones.</p>
+  </section>
+
+  <section class="wrap section" id="time">
+    <p class="kicker">Time of day</p>
+    <h2>Weekdays peak at <span data-v="summary.peak_hours.weekday.hour|hh"></span>; weekend nights stay busy</h2>
+    <div class="two-col">
+      <figure>
+        <figcaption class="chart-title">Mean trips per calendar day, by pickup hour</figcaption>
+        <svg id="hourly" class="chart" role="img" aria-label="Line chart of trips per hour for weekdays and weekends"></svg>
+        <p class="note">Weekday curve divides by 23 calendar weekdays, weekend curve by 8. At midnight weekends run <b data-v="summary.midnight_ratio|x1"></b> weekdays.</p>
+      </figure>
+      <figure>
+        <figcaption class="chart-title">Trips per day, January 2025</figcaption>
+        <svg id="daily" class="chart" role="img" aria-label="Bar chart of trips per day in January 2025"></svg>
+        <p class="note">Saturdays and Sundays in yellow. New Year's Day and Martin Luther King Jr. Day (Jan 20) are counted as weekdays in the hourly curves.</p>
+      </figure>
+    </div>
+  </section>
+
+  <section class="wrap section" id="rules">
+    <p class="kicker">Association rules</p>
+    <h2>Where a trip starts predicts where it ends</h2>
+    <p class="lede">Every trip becomes a basket of 8 items: day type, time slot, pickup and drop-off borough, distance, total amount, payment and passengers. We mined itemsets with support ≥ 1% and at most 3 items, and ran Apriori and FP-Growth side by side; they returned identical itemsets and counts. Below are the four rules from the poster, followed by all <span data-v="summary.rules|int"></span> saved directional rules.</p>
+    <figure>
+      <figcaption class="chart-title">Rule confidence against the drop-off borough's share of all trips</figcaption>
+      <svg id="highlights" class="chart" role="img" aria-label="Dumbbell chart of four highlighted rules"></svg>
+      <p class="note">Rules shown: antecedent is a pickup borough, day type or time slot; consequent is a drop-off borough; support ≥ 1%, lift ≥ 1.05; top four by lift. Each was recounted directly from the cleaned trips.</p>
+    </figure>
+
+    <div class="explorer" id="explorer">
+      <h3>Rule explorer</h3>
+      <div class="filters">
+        <label class="grow">Search items
+          <input id="f-text" type="search" placeholder="Brooklyn, cash, ≥ 15 mi" autocomplete="off">
+        </label>
+        <label>Then-side field
+          <select id="f-field"><option value="">Any</option></select>
+        </label>
+        <label>Min support <output id="o-sup"></output>
+          <input id="f-sup" type="range" min="1" max="30" step="0.5" value="1">
+        </label>
+        <label>Min confidence <output id="o-conf"></output>
+          <input id="f-conf" type="range" min="0" max="100" step="1" value="35">
+        </label>
+        <label>Min lift <output id="o-lift"></output>
+          <input id="f-lift" type="range" min="0" max="10" step="0.05" value="1.05">
+        </label>
+        <label>Sort by
+          <select id="f-sort">
+            <option value="lift">Lift</option><option value="confidence">Confidence</option>
+            <option value="support">Support</option><option value="kulc">Kulczynski</option>
+          </select>
+        </label>
+      </div>
+      <p class="count" id="rule-count" aria-live="polite"></p>
+      <div class="table-wrap">
+        <table class="rules-table">
+          <thead><tr><th scope="col">If</th><th scope="col">Then</th><th scope="col" class="num">Support</th><th scope="col" class="num">Confidence</th><th scope="col" class="num">Lift</th><th scope="col" class="num">Kulc</th><th scope="col" class="num">IR</th></tr></thead>
+          <tbody id="rule-rows"></tbody>
+        </table>
+      </div>
+      <div class="pager"><button type="button" id="prev">Previous</button><span id="page"></span><button type="button" id="next">Next</button></div>
+      <div class="rule-detail" id="rule-detail" aria-live="polite"></div>
+      <p class="note">Default filters (confidence ≥ 35%, lift ≥ 1.05) reproduce the <span data-v="summary.default_display_rules|int"></span> rules shown by default in our analysis app. Rules describe co-occurrence, not cause. A negative total usually reflects refunds or adjustments, not misconduct.</p>
+    </div>
+  </section>
+
+  <section class="wrap section" id="forecast">
+    <p class="kicker">Forecasting</p>
+    <h2>Boosting cuts next-hour error by <span data-v="summary.forecast.improvement_vs_previous_week|pct0"></span> against last week</h2>
+    <div class="two-col">
+      <figure>
+        <figcaption class="chart-title">Test WAPE, next-hour pickups per taxi zone (lower is better)</figcaption>
+        <svg id="wape" class="chart" role="img" aria-label="Bar chart of forecast error by model"></svg>
+      </figure>
+      <div>
+        <table class="plain" id="forecast-table"></table>
+        <p class="note" id="forecast-protocol"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="quality">
+    <p class="kicker">Data quality</p>
+    <h2>Only <span id="dropped-share"></span> of raw records are excluded by default</h2>
+    <p class="lede">Quality checks are kept as flags rather than deleted, so every exclusion can be traced back. Checks can overlap, so the counts do not add up.</p>
+    <svg id="quality-chart" class="chart" role="img" aria-label="Bar chart of quality flag counts"></svg>
+  </section>
+
+  <section class="wrap section" id="method">
+    <p class="kicker">How we built it</p>
+    <h2>A count-preserving path from raw records to inspectable rules</h2>
+    <ol class="steps">
+      <li><b>Clean</b> Validate timestamps, amounts and zone IDs; keep quality flags and source-file hashes.</li>
+      <li><b>Encode</b> 8 categorical items per trip; merge identical baskets but keep their counts (<span data-v="summary.unique_baskets|int"></span> weighted baskets).</li>
+      <li><b>Mine twice</b> Apriori and FP-Growth must return identical frequent itemsets (<span data-v="summary.frequent_itemsets|int"></span>) and support counts.</li>
+      <li><b>Trace</b> Recount every highlighted rule directly from the cleaned trips and inspect matching records.</li>
+    </ol>
+    <div class="formulae">
+      <p><code>support = n(A and B) / N</code></p>
+      <p><code>confidence = n(A and B) / n(A)</code></p>
+      <p><code>lift = confidence / P(B)</code></p>
+      <p><code>Kulc = (n(AB)/n(A) + n(AB)/n(B)) / 2</code></p>
+      <p><code>IR = |n(A) − n(B)| / (n(A) + n(B) − n(AB))</code></p>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3>Limits</h3>
+        <p>One month of data and borough-level rules; the 1% support floor and the three-item limit hide rarer and longer patterns. Recorded trips are not total demand. Rules show co-occurrence, not cause, and cross-month stability has not been tested yet.</p>
+      </div>
+      <div>
+        <h3>Next steps</h3>
+        <ul>
+          <li>Freeze rules, bins and thresholds; re-test them on later months and report retention and metric drift.</li>
+          <li>Mine taxi-zone and time-stratified rules, with minimum counts so small zones are not over-read.</li>
+          <li>Host the full analysis app (Streamlit) with versioned data snapshots.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <h3>Data</h3>
+        <p>NYC Taxi &amp; Limousine Commission: <a id="src-page">TLC Trip Record Data</a> (Yellow Taxi, January 2025), Taxi Zone Lookup and Taxi Zone shapefile. <a id="src-dict">Data dictionary</a>.</p>
+        <ul class="hashes" id="sources"></ul>
+      </div>
+      <div>
+        <h3>Reproducibility</h3>
+        <p>Analysis code: <a href="https://github.com/NanFeiDeXuMu/dataMining">github.com/NanFeiDeXuMu/dataMining</a> (UrbanPulse v0.3.1). Run <code data-v="summary.run_id"></code>, commit <code data-v="summary.git_commit|short"></code>. Site source: <a href="https://github.com/NanFeiDeXuMu/DMPresent">github.com/NanFeiDeXuMu/DMPresent</a>.</p>
+        <p>AI assistance: analysis scripts, figures, this page and text drafting.</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+<noscript><p class="wrap">This page draws its charts with JavaScript. Please enable it to see the interactive figures.</p></noscript>
+<script src="assets/js/app.js" defer></script>
+</body>
+</html>
